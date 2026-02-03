@@ -9,15 +9,18 @@ function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
+    setLoading(true);
     if (password !== confirmPassword) {
       alert("Passwords do not match");
+      setLoading(false);
       return;
     }
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -25,10 +28,28 @@ function SignUp() {
         },
       });
       if (error) throw error;
+
+      // Insert user into profiles table for the dashboard list
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert([{ id: data.user.id, full_name: fullName, email: email }]);
+        
+        if (profileError) console.error("Error creating profile:", profileError);
+      }
+
       alert("Registration successful! Please check your email for verification.");
       navigate("/signin");
     } catch (error) {
-      alert(error.message);
+      if (error.message.includes("rate limit")) {
+        alert(
+          "Email rate limit exceeded. Please wait a few minutes before trying again.\n\n(Tip: In Supabase Dashboard, go to Auth > Rate Limits to increase this, or Auth > Providers > Email to disable confirmation for development.)"
+        );
+      } else {
+        alert(error.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,9 +138,10 @@ function SignUp() {
           {/* Button */}
           <button
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition duration-300"
+            disabled={loading}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition duration-300 disabled:opacity-50"
           >
-            Create Account
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 

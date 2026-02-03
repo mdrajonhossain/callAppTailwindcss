@@ -26,6 +26,10 @@ function SignIn() {
         alert(
           "Please check your email to confirm your account. If you haven't received it, check your spam folder."
         );
+      } else if (error.message.includes("rate limit")) {
+        alert(
+          "Email rate limit exceeded. Please wait a few minutes before trying again.\n\n(Tip: In Supabase Dashboard, go to Auth > Rate Limits to increase this, or Auth > Providers > Email to disable confirmation for development.)"
+        );
       } else {
         alert(error.message);
       }
