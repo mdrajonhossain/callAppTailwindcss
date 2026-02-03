@@ -18,6 +18,7 @@ function Dashboardpage() {
   const [incomingCall, setIncomingCall] = useState(null);
   const [callingUser, setCallingUser] = useState(null);
   const [isRinging, setIsRinging] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -28,8 +29,10 @@ function Dashboardpage() {
 
   useEffect(() => {
     // 1. Get current user
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
         setMyself(user);
 
         // Auto-sync: Add user to profiles table if missing (fixes "user not showing" for existing users)
@@ -43,26 +46,44 @@ function Dashboardpage() {
         
         // 2. Fetch all users from profiles table (now includes current user)
         fetchUsers();
-      }
-    });
 
-    // Initialize Ringtone
-    audioRef.current = new Audio("/Hello-Tune.mp3");
-    audioRef.current.loop = true;
+      // Initialize Ringtone
+      audioRef.current = new Audio("/Hello-Tune.mp3");
+      audioRef.current.loop = true;
 
-    // 3. Subscribe to signaling channel
-    const channel = supabase.channel("video-call-signaling");
-    channelRef.current = channel;
+      // 3. Subscribe to signaling channel with Presence
+      const channel = supabase.channel("video-call-signaling", {
+        config: {
+          presence: {
+            key: user.id,
+          },
+        },
+      });
+      channelRef.current = channel;
 
-    channel
-      .on("broadcast", { event: "signal" }, (payload) => {
-        handleSignal(payload.payload);
-      })
-      .subscribe();
+      channel
+        .on("broadcast", { event: "signal" }, (payload) => {
+          handleSignal(payload.payload);
+        })
+        .on("presence", { event: "sync" }, () => {
+          const newState = channel.presenceState();
+          const onlineIds = new Set(Object.keys(newState));
+          setOnlineUsers(onlineIds);
+        })
+        .subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            await channel.track({ online_at: new Date().toISOString() });
+          }
+        });
+    };
+
+    init();
 
     return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -429,6 +450,12 @@ function Dashboardpage() {
                   <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">
                     {user.full_name ? user.full_name.charAt(0) : "U"}
                   </div>
+                  {/* Online Indicator */}
+                  <span
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                      onlineUsers.has(user.id) ? "bg-green-500" : "bg-gray-400"
+                    }`}
+                  ></span>
                 </div>
 
                 <div>
