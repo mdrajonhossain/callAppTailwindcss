@@ -290,30 +290,16 @@ function Dashboardpage() {
 
         {/* Video Call Area */}
         {callActive && (
-          <div className="flex-1 bg-black relative flex flex-col md:flex-row">
-            <div className="flex-1 relative border-r border-gray-700">
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
-                Remote
-              </span>
-            </div>
-            <div className="w-full md:w-1/3 h-48 md:h-auto relative">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-              <span className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
-                You
-              </span>
-            </div>
+          <div className="flex-1 bg-black relative">
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            <span className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+              Remote User
+            </span>
             <button
               onClick={endCall}
               className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 hover:bg-red-700 text-white rounded-full p-4 shadow-lg"
