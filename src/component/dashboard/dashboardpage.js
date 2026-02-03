@@ -17,6 +17,7 @@ function Dashboardpage() {
   const [callActive, setCallActive] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callingUser, setCallingUser] = useState(null);
+  const [isRinging, setIsRinging] = useState(false);
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
@@ -106,6 +107,7 @@ function Dashboardpage() {
         break;
       case "answer":
         if (peerConnection.current) {
+          setIsRinging(false);
           await peerConnection.current.setRemoteDescription(
             new RTCSessionDescription(data.sdp)
           );
@@ -145,6 +147,7 @@ function Dashboardpage() {
   const startCall = async (targetUserId, targetUserName) => {
     setCallingUser({ id: targetUserId, name: targetUserName });
     setCallActive(true);
+    setIsRinging(true);
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: true,
@@ -271,6 +274,7 @@ function Dashboardpage() {
     if (localStream) localStream.getTracks().forEach((track) => track.stop());
     setCallActive(false);
     setIncomingCall(null);
+    setIsRinging(false);
     setCallingUser(null);
     setLocalStream(null);
     setRemoteStream(null);
@@ -364,6 +368,30 @@ function Dashboardpage() {
         {/* Video Call Area */}
         {callActive && (
           <div className="flex-1 bg-black relative">
+            {isRinging && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 text-white">
+                <div className="relative mb-8">
+                  <div className="absolute inset-0 bg-purple-500 rounded-full animate-ping opacity-75"></div>
+                  <div className="relative w-32 h-32 bg-purple-600 rounded-full flex items-center justify-center border-4 border-gray-800 shadow-2xl">
+                    <span className="text-5xl font-bold">
+                      {callingUser?.name ? callingUser.name.charAt(0).toUpperCase() : "U"}
+                    </span>
+                  </div>
+                </div>
+                <h3 className="text-2xl font-semibold tracking-widest animate-pulse mb-2">Ringing...</h3>
+                <p className="text-gray-400 text-lg mb-12">Calling {callingUser?.name}</p>
+                
+                <button
+                  onClick={endCall}
+                  className="bg-red-600 hover:bg-red-700 text-white rounded-full p-4 shadow-lg transition transform hover:scale-110"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             <video
               ref={remoteVideoRef}
               autoPlay
