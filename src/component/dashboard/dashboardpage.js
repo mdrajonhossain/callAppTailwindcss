@@ -45,7 +45,7 @@ function Dashboardpage() {
         if (error) console.error("Error syncing profile:", error);
         
         // 2. Fetch all users from profiles table (now includes current user)
-        fetchUsers();
+        fetchUsers(user.id);
 
       // Initialize Ringtone
       audioRef.current = new Audio("/Hello-Tune.mp3");
@@ -94,7 +94,7 @@ function Dashboardpage() {
     };
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (currentUserId) => {
     const { data, error } = await supabase.from("profiles").select("*");
     if (error) {
       console.error("Error fetching users:", error);
@@ -102,7 +102,12 @@ function Dashboardpage() {
         alert("Setup Required: The 'profiles' table is missing in Supabase.\n\nPlease run the SQL script provided in the chat to create it.");
       }
     } else {
-      setUsers(data || []);
+      const sortedUsers = (data || []).sort((a, b) => {
+        if (a.id === currentUserId) return -1;
+        if (b.id === currentUserId) return 1;
+        return 0;
+      });
+      setUsers(sortedUsers);
     }
   };
 
@@ -128,10 +133,21 @@ function Dashboardpage() {
         break;
       case "answer":
         if (peerConnection.current) {
+          // Fix: Check if connection is already stable to prevent "Called in wrong state: stable" error
+          if (peerConnection.current.signalingState === "stable") {
+            setIsRinging(false);
+            return;
+          }
+
           setIsRinging(false);
-          await peerConnection.current.setRemoteDescription(
-            new RTCSessionDescription(data.sdp)
-          );
+          try {
+            await peerConnection.current.setRemoteDescription(
+              new RTCSessionDescription(data.sdp)
+            );
+          } catch (err) {
+            console.error("Error setting remote answer:", err);
+            return;
+          }
           // Process any queued candidates
           while (pendingCandidates.current.length > 0) {
             const candidate = pendingCandidates.current.shift();
@@ -459,7 +475,10 @@ function Dashboardpage() {
                 </div>
 
                 <div>
-                  <p className="font-medium text-gray-800">{user.full_name}</p>
+                  <p className="font-medium text-gray-800">
+                    {user.full_name}
+                    {myself && user.id === myself.id && " (You)"}
+                  </p>
                   <p className="text-sm text-gray-500">{user.email}</p>
                 </div>
               </div>
