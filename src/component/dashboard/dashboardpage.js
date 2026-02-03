@@ -23,6 +23,7 @@ function Dashboardpage() {
   const peerConnection = useRef();
   const pendingCandidates = useRef([]);
   const channelRef = useRef(null);
+  const audioRef = useRef(null);
 
   useEffect(() => {
     // 1. Get current user
@@ -44,6 +45,10 @@ function Dashboardpage() {
       }
     });
 
+    // Initialize Ringtone
+    audioRef.current = new Audio("/Hello-Tune.mp3");
+    audioRef.current.loop = true;
+
     // 3. Subscribe to signaling channel
     const channel = supabase.channel("video-call-signaling");
     channelRef.current = channel;
@@ -59,6 +64,10 @@ function Dashboardpage() {
       channelRef.current = null;
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
     };
   }, []);
@@ -88,6 +97,12 @@ function Dashboardpage() {
           sdp: data.sdp,
         });
         pendingCandidates.current = []; // Reset candidate queue for new call
+
+        try {
+          await audioRef.current.play();
+        } catch (err) {
+          console.error("Ringtone play error:", err);
+        }
         break;
       case "answer":
         if (peerConnection.current) {
@@ -172,6 +187,10 @@ function Dashboardpage() {
   };
 
   const answerCall = async () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setCallingUser({ id: incomingCall.callerId, name: incomingCall.callerName });
     setCallActive(true);
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -237,6 +256,10 @@ function Dashboardpage() {
   };
 
   const endCall = async () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     if (callingUser) {
       await sendSignal({
         type: "end-call",
@@ -265,11 +288,11 @@ function Dashboardpage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-0 md:p-4">
       {/* Dashboard Card */}
-      <div className="w-full max-w-4xl bg-white shadow-md rounded-lg flex flex-col h-[80vh]">
+      <div className="w-full max-w-4xl bg-white shadow-none md:shadow-md rounded-none md:rounded-lg flex flex-col h-screen md:h-[80vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
+        <div className="px-4 py-3 md:px-6 md:py-4 border-b flex items-center justify-between flex-shrink-0">
           <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500">
@@ -287,7 +310,7 @@ function Dashboardpage() {
         {/* Incoming Call Modal */}
         {incomingCall && !callActive && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-[90%] max-w-sm flex flex-col items-center">
               <div className="w-24 h-24 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
                 <span className="text-4xl text-white font-bold">
                   {incomingCall.callerName ? incomingCall.callerName.charAt(0).toUpperCase() : "U"}
@@ -298,7 +321,13 @@ function Dashboardpage() {
               
               <div className="flex gap-6 w-full justify-center">
                 <button
-                  onClick={() => setIncomingCall(null)}
+                  onClick={() => {
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current.currentTime = 0;
+                    }
+                    setIncomingCall(null);
+                  }}
                   className="flex flex-col items-center gap-1 group"
                 >
                   <div className="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:bg-red-600 transition-all transform group-hover:scale-110">
@@ -357,7 +386,7 @@ function Dashboardpage() {
           {users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition"
+              className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 hover:bg-gray-50 transition"
             >
               {/* Left: Avatar + Name */}
               <div className="flex items-center gap-4">
