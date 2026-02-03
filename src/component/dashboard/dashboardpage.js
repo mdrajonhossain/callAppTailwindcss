@@ -1,4 +1,13 @@
+import { supabase } from "../../supabaseClient";
+
 function Dashboardpage() {
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert(error.message);
+    }
+  };
+
   const users = [
     { id: 1, name: "John Doe", online: true },
     { id: 2, name: "Sarah Smith", online: false },
@@ -23,16 +32,21 @@ function Dashboardpage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       {/* Dashboard Card */}
-      <div className="w-full max-w-4xl bg-white shadow-md rounded-lg flex flex-col h-[100vh]">
-
+      <div className="w-full max-w-4xl bg-white shadow-md rounded-lg flex flex-col h-[80vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Messages
-          </h2>
-          <span className="text-sm text-gray-500">{users.length} Users</span>
+          <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">{users.length} Users</span>
+            <button
+              onClick={handleSignOut}
+              className="bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-1 px-3 rounded transition duration-300"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {/* Scrollable User List */}
@@ -77,7 +91,6 @@ function Dashboardpage() {
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );

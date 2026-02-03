@@ -1,7 +1,37 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { supabase } from "../supabaseClient";
 
 
 function SignUp() {
+  const navigate = useNavigate();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+        },
+      });
+      if (error) throw error;
+      alert("Registration successful! Please check your email for verification.");
+      navigate("/signin");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-500">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8">
@@ -15,7 +45,7 @@ function SignUp() {
         </p>
 
         {/* Form */}
-        <form className="mt-8 space-y-5">
+        <form className="mt-8 space-y-5" onSubmit={handleSignUp}>
 
           {/* Name */}
           <div>
@@ -25,6 +55,8 @@ function SignUp() {
             <input
               type="text"
               placeholder="John Doe"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
           </div>
@@ -37,6 +69,8 @@ function SignUp() {
             <input
               type="email"
               placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
           </div>
@@ -49,6 +83,8 @@ function SignUp() {
             <input
               type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
           </div>
@@ -61,6 +97,8 @@ function SignUp() {
             <input
               type="password"
               placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
             />
           </div>
