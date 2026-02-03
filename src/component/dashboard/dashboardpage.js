@@ -284,23 +284,43 @@ function Dashboardpage() {
           </div>
         </div>
 
-        {/* Incoming Call Alert */}
+        {/* Incoming Call Modal */}
         {incomingCall && !callActive && (
-          <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 m-4 flex justify-between items-center">
-            <p className="font-bold">Incoming Call from {incomingCall.callerName}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={answerCall}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-              >
-                Answer
-              </button>
-              <button
-                onClick={() => setIncomingCall(null)}
-                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-              >
-                Reject
-              </button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-80 flex flex-col items-center">
+              <div className="w-24 h-24 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                <span className="text-4xl text-white font-bold">
+                  {incomingCall.callerName ? incomingCall.callerName.charAt(0).toUpperCase() : "U"}
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-1">Incoming Call</h3>
+              <p className="text-gray-500 mb-8 text-center">{incomingCall.callerName}</p>
+              
+              <div className="flex gap-6 w-full justify-center">
+                <button
+                  onClick={() => setIncomingCall(null)}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:bg-red-600 transition-all transform group-hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">Decline</span>
+                </button>
+
+                <button
+                  onClick={answerCall}
+                  className="flex flex-col items-center gap-1 group"
+                >
+                  <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:bg-green-600 transition-all transform group-hover:scale-110">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">Accept</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
