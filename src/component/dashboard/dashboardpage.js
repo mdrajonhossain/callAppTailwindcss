@@ -321,10 +321,17 @@ function Dashboardpage() {
               
               <div className="flex gap-6 w-full justify-center">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (audioRef.current) {
                       audioRef.current.pause();
                       audioRef.current.currentTime = 0;
+                    }
+                    if (incomingCall?.callerId) {
+                      await sendSignal({
+                        type: "end-call",
+                        target: incomingCall.callerId,
+                        from: myself?.id,
+                      });
                     }
                     setIncomingCall(null);
                   }}
