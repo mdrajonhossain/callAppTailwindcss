@@ -13,7 +13,6 @@ function Dashboardpage() {
   const [users, setUsers] = useState([]);
   const [myself, setMyself] = useState(null);
   const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
   const [callActive, setCallActive] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callingUser, setCallingUser] = useState(null);
@@ -26,6 +25,11 @@ function Dashboardpage() {
   const pendingCandidates = useRef([]);
   const channelRef = useRef(null);
   const audioRef = useRef(null);
+  const localStreamRef = useRef(null);
+
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
 
   useEffect(() => {
     // 1. Get current user
@@ -84,8 +88,8 @@ function Dashboardpage() {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (audioRef.current) {
         audioRef.current.pause();
@@ -210,7 +214,6 @@ function Dashboardpage() {
     };
 
     pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
     };
 
@@ -257,7 +260,6 @@ function Dashboardpage() {
     };
 
     pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
     };
 
@@ -314,7 +316,6 @@ function Dashboardpage() {
     setIsRinging(false);
     setCallingUser(null);
     setLocalStream(null);
-    setRemoteStream(null);
     pendingCandidates.current = [];
     setTimeout(() => {
       window.location.reload(); // Simple reset
