@@ -22,6 +22,7 @@ function Dashboardpage() {
   const remoteVideoRef = useRef();
   const peerConnection = useRef();
   const pendingCandidates = useRef([]);
+  const channelRef = useRef(null);
 
   useEffect(() => {
     // 1. Get current user
@@ -45,6 +46,7 @@ function Dashboardpage() {
 
     // 3. Subscribe to signaling channel
     const channel = supabase.channel("video-call-signaling");
+    channelRef.current = channel;
 
     channel
       .on("broadcast", { event: "signal" }, (payload) => {
@@ -54,6 +56,7 @@ function Dashboardpage() {
 
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -116,6 +119,9 @@ function Dashboardpage() {
           pendingCandidates.current.push(data.candidate);
         }
         break;
+      case "end-call":
+        window.location.reload();
+        break;
       default:
         break;
     }
@@ -166,6 +172,7 @@ function Dashboardpage() {
   };
 
   const answerCall = async () => {
+    setCallingUser({ id: incomingCall.callerId, name: incomingCall.callerName });
     setCallActive(true);
     const stream = await navigator.mediaDevices.getUserMedia({
       video: true,
@@ -221,14 +228,22 @@ function Dashboardpage() {
   };
 
   const sendSignal = async (payload) => {
-    await supabase.channel("video-call-signaling").send({
+    const channel = channelRef.current || supabase.channel("video-call-signaling");
+    await channel.send({
       type: "broadcast",
       event: "signal",
       payload: payload,
     });
   };
 
-  const endCall = () => {
+  const endCall = async () => {
+    if (callingUser) {
+      await sendSignal({
+        type: "end-call",
+        target: callingUser.id,
+        from: myself.id,
+      });
+    }
     if (peerConnection.current) peerConnection.current.close();
     if (localStream) localStream.getTracks().forEach((track) => track.stop());
     setCallActive(false);
@@ -237,7 +252,9 @@ function Dashboardpage() {
     setLocalStream(null);
     setRemoteStream(null);
     pendingCandidates.current = [];
-    window.location.reload(); // Simple reset
+    setTimeout(() => {
+      window.location.reload(); // Simple reset
+    }, 500);
   };
 
   const handleSignOut = async () => {
