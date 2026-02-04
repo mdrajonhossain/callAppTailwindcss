@@ -54,7 +54,7 @@ function Dashboardpage() {
       if (error) {
         console.error("Error fetching users:", error);
         if (error.code === "PGRST205") {
-          alert("Setup Required: The 'profiles' table is missing in Supabase.\n\nPlease run the SQL script provided in the chat to create it.");
+          console.error("Setup Required: The 'profiles' table is missing in Supabase. Please run the SQL script provided in the chat to create it.");
         }
       } else {
         const sortedUsers = (data || []).sort((a, b) => {
@@ -138,7 +138,8 @@ function Dashboardpage() {
 
     // 1. Get current user
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
       if (!user) return;
 
         setMyself(user);
@@ -212,6 +213,8 @@ function Dashboardpage() {
   };
 
   const startCall = async (targetUserId, targetUserName) => {
+    if (!myself) return;
+
     setCallingUser({ id: targetUserId, name: targetUserName });
     setCallActive(true);
     setIsRinging(true);
@@ -243,7 +246,7 @@ function Dashboardpage() {
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log("ICE Connection State:", pc.iceConnectionState);
+      // ICE Connection State monitoring
     };
 
     const offer = await pc.createOffer();
@@ -259,6 +262,8 @@ function Dashboardpage() {
   };
 
   const answerCall = async () => {
+    if (!myself) return;
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -292,7 +297,7 @@ function Dashboardpage() {
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log("ICE Connection State:", pc.iceConnectionState);
+      // ICE Connection State monitoring
     };
 
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.sdp));
@@ -349,7 +354,7 @@ function Dashboardpage() {
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      alert(error.message);
+      console.error("Error signing out:", error.message);
     }
   };
 
