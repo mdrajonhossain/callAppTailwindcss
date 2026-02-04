@@ -4,7 +4,11 @@ import { supabase } from "../../supabaseClient";
 const servers = {
   iceServers: [
     {
-      urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"],
+      urls: [
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun.l.google.com:19302",
+      ],
     },
   ],
 };
@@ -13,6 +17,7 @@ function Dashboardpage() {
   const [users, setUsers] = useState([]);
   const [myself, setMyself] = useState(null);
   const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   const [callActive, setCallActive] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callingUser, setCallingUser] = useState(null);
@@ -36,6 +41,12 @@ function Dashboardpage() {
       localVideoRef.current.srcObject = localStream;
     }
   }, [localStream, callActive]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callActive]);
 
   useEffect(() => {
     const fetchUsers = async (currentUserId) => {
@@ -191,6 +202,15 @@ function Dashboardpage() {
     };
   }, []);
 
+  const sendSignal = async (payload) => {
+    const channel = channelRef.current || supabase.channel("video-call-signaling");
+    await channel.send({
+      type: "broadcast",
+      event: "signal",
+      payload: payload,
+    });
+  };
+
   const startCall = async (targetUserId, targetUserName) => {
     setCallingUser({ id: targetUserId, name: targetUserName });
     setCallActive(true);
@@ -201,7 +221,6 @@ function Dashboardpage() {
       audio: true,
     });
     setLocalStream(stream);
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
     const pc = new RTCPeerConnection(servers);
     peerConnection.current = pc;
@@ -220,7 +239,11 @@ function Dashboardpage() {
     };
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+      setRemoteStream(event.streams[0]);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE Connection State:", pc.iceConnectionState);
     };
 
     const offer = await pc.createOffer();
@@ -247,7 +270,6 @@ function Dashboardpage() {
       audio: true,
     });
     setLocalStream(stream);
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
     const pc = new RTCPeerConnection(servers);
     peerConnection.current = pc;
@@ -266,7 +288,11 @@ function Dashboardpage() {
     };
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+      setRemoteStream(event.streams[0]);
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("ICE Connection State:", pc.iceConnectionState);
     };
 
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.sdp));
@@ -294,15 +320,6 @@ function Dashboardpage() {
     setIncomingCall(null);
   };
 
-  const sendSignal = async (payload) => {
-    const channel = channelRef.current || supabase.channel("video-call-signaling");
-    await channel.send({
-      type: "broadcast",
-      event: "signal",
-      payload: payload,
-    });
-  };
-
   const endCall = async () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -322,6 +339,7 @@ function Dashboardpage() {
     setIsRinging(false);
     setCallingUser(null);
     setLocalStream(null);
+    setRemoteStream(null);
     pendingCandidates.current = [];
     setTimeout(() => {
       window.location.reload(); // Simple reset
