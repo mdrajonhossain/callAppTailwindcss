@@ -129,7 +129,7 @@ function Dashboardpage() {
           }
           break;
         case "end-call":
-          window.location.reload();
+          resetCallState();
           break;
         default:
           break;
@@ -325,20 +325,19 @@ function Dashboardpage() {
     setIncomingCall(null);
   };
 
-  const endCall = async () => {
+  const resetCallState = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    if (callingUser) {
-      await sendSignal({
-        type: "end-call",
-        target: callingUser.id,
-        from: myself.id,
-      });
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
     }
-    if (peerConnection.current) peerConnection.current.close();
-    if (localStream) localStream.getTracks().forEach((track) => track.stop());
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+    }
+
     setCallActive(false);
     setIncomingCall(null);
     setIsRinging(false);
@@ -346,9 +345,18 @@ function Dashboardpage() {
     setLocalStream(null);
     setRemoteStream(null);
     pendingCandidates.current = [];
-    setTimeout(() => {
-      window.location.reload(); // Simple reset
-    }, 500);
+    localStreamRef.current = null;
+  };
+
+  const endCall = async () => {
+    if (callingUser) {
+      await sendSignal({
+        type: "end-call",
+        target: callingUser.id,
+        from: myself.id,
+      });
+    }
+    resetCallState();
   };
 
   const handleSignOut = async () => {
