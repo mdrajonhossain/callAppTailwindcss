@@ -32,6 +32,93 @@ function Dashboardpage() {
   }, [localStream]);
 
   useEffect(() => {
+    const fetchUsers = async (currentUserId) => {
+      const { data, error } = await supabase.from("profiles").select("*");
+      if (error) {
+        console.error("Error fetching users:", error);
+        if (error.code === "PGRST205") {
+          alert("Setup Required: The 'profiles' table is missing in Supabase.\n\nPlease run the SQL script provided in the chat to create it.");
+        }
+      } else {
+        const sortedUsers = (data || []).sort((a, b) => {
+          if (a.id === currentUserId) return -1;
+          if (b.id === currentUserId) return 1;
+          return 0;
+        });
+        setUsers(sortedUsers);
+      }
+    };
+
+    const handleSignal = async (data) => {
+      // Only handle signals meant for me
+      const currentUser = await supabase.auth.getUser();
+      if (data.target !== currentUser.data.user?.id) return;
+
+      switch (data.type) {
+        case "offer":
+          setIncomingCall({
+            callerId: data.from,
+            callerName: data.callerName,
+            sdp: data.sdp,
+          });
+          pendingCandidates.current = []; // Reset candidate queue for new call
+
+          try {
+            await audioRef.current.play();
+          } catch (err) {
+            console.error("Ringtone play error:", err);
+          }
+          break;
+        case "answer":
+          if (peerConnection.current) {
+            // Fix: Check if connection is already stable to prevent "Called in wrong state: stable" error
+            if (peerConnection.current.signalingState === "stable") {
+              setIsRinging(false);
+              return;
+            }
+
+            setIsRinging(false);
+            try {
+              await peerConnection.current.setRemoteDescription(
+                new RTCSessionDescription(data.sdp)
+              );
+            } catch (err) {
+              console.error("Error setting remote answer:", err);
+              return;
+            }
+            // Process any queued candidates
+            while (pendingCandidates.current.length > 0) {
+              const candidate = pendingCandidates.current.shift();
+              try {
+                await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("Error adding queued ice candidate:", e);
+              }
+            }
+          }
+          break;
+        case "candidate":
+          if (peerConnection.current && peerConnection.current.remoteDescription) {
+            try {
+              await peerConnection.current.addIceCandidate(
+                new RTCIceCandidate(data.candidate)
+              );
+            } catch (e) {
+              console.error("Error adding ice candidate:", e);
+            }
+          } else {
+            // Queue candidate if remote description is not set yet
+            pendingCandidates.current.push(data.candidate);
+          }
+          break;
+        case "end-call":
+          window.location.reload();
+          break;
+        default:
+          break;
+      }
+    };
+
     // 1. Get current user
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -97,93 +184,6 @@ function Dashboardpage() {
       }
     };
   }, []);
-
-  const fetchUsers = async (currentUserId) => {
-    const { data, error } = await supabase.from("profiles").select("*");
-    if (error) {
-      console.error("Error fetching users:", error);
-      if (error.code === "PGRST205") {
-        alert("Setup Required: The 'profiles' table is missing in Supabase.\n\nPlease run the SQL script provided in the chat to create it.");
-      }
-    } else {
-      const sortedUsers = (data || []).sort((a, b) => {
-        if (a.id === currentUserId) return -1;
-        if (b.id === currentUserId) return 1;
-        return 0;
-      });
-      setUsers(sortedUsers);
-    }
-  };
-
-  const handleSignal = async (data) => {
-    // Only handle signals meant for me
-    const currentUser = await supabase.auth.getUser();
-    if (data.target !== currentUser.data.user?.id) return;
-
-    switch (data.type) {
-      case "offer":
-        setIncomingCall({
-          callerId: data.from,
-          callerName: data.callerName,
-          sdp: data.sdp,
-        });
-        pendingCandidates.current = []; // Reset candidate queue for new call
-
-        try {
-          await audioRef.current.play();
-        } catch (err) {
-          console.error("Ringtone play error:", err);
-        }
-        break;
-      case "answer":
-        if (peerConnection.current) {
-          // Fix: Check if connection is already stable to prevent "Called in wrong state: stable" error
-          if (peerConnection.current.signalingState === "stable") {
-            setIsRinging(false);
-            return;
-          }
-
-          setIsRinging(false);
-          try {
-            await peerConnection.current.setRemoteDescription(
-              new RTCSessionDescription(data.sdp)
-            );
-          } catch (err) {
-            console.error("Error setting remote answer:", err);
-            return;
-          }
-          // Process any queued candidates
-          while (pendingCandidates.current.length > 0) {
-            const candidate = pendingCandidates.current.shift();
-            try {
-              await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch (e) {
-              console.error("Error adding queued ice candidate:", e);
-            }
-          }
-        }
-        break;
-      case "candidate":
-        if (peerConnection.current && peerConnection.current.remoteDescription) {
-          try {
-            await peerConnection.current.addIceCandidate(
-              new RTCIceCandidate(data.candidate)
-            );
-          } catch (e) {
-            console.error("Error adding ice candidate:", e);
-          }
-        } else {
-          // Queue candidate if remote description is not set yet
-          pendingCandidates.current.push(data.candidate);
-        }
-        break;
-      case "end-call":
-        window.location.reload();
-        break;
-      default:
-        break;
-    }
-  };
 
   const startCall = async (targetUserId, targetUserName) => {
     setCallingUser({ id: targetUserId, name: targetUserName });
