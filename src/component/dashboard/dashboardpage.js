@@ -32,6 +32,12 @@ function Dashboardpage() {
   }, [localStream]);
 
   useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, callActive]);
+
+  useEffect(() => {
     const fetchUsers = async (currentUserId) => {
       const { data, error } = await supabase.from("profiles").select("*");
       if (error) {
@@ -439,6 +445,18 @@ function Dashboardpage() {
             <span className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
               Remote User
             </span>
+
+            {/* Local Video (Picture-in-Picture) */}
+            <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg z-10">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+
             <button
               onClick={endCall}
               className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 hover:bg-red-700 text-white rounded-full p-4 shadow-lg"
